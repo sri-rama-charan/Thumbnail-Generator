@@ -3,14 +3,17 @@
  * 
  * Flow:
  * 1. Manages state definitions and submission logic for both Generate and Recreate flows.
- * 2. Renders the tab switchers.
- * 3. Incorporates modular child views:
+ * 2. Listens to React Router state transitions (such as reference inputs from ThumbnailCards),
+ *    automatically switching tabs to Recreate mode and populating fields.
+ * 3. Renders the tab switchers.
+ * 4. Incorporates modular child views:
  *    - GenerateForm: Inputs for fresh thumbnail concepts.
  *    - RecreateForm: Inputs for editing reference graphics.
  *    - PreviewPanel: Displays loader states, retry error traps, and optimized prompt values.
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { api } from "../api/api";
 import { useAuth } from "../context/AuthContext";
 import { palettes, styles } from "../utils/constants";
@@ -20,6 +23,7 @@ import PreviewPanel from "../components/generate/PreviewPanel";
 
 const Generate = ({ setToast }) => {
   const { user, updateCredits } = useAuth();
+  const location = useLocation();
   
   const [activeTab, setActiveTab] = useState("generate");
   const [generating, setGenerating] = useState(false);
@@ -44,6 +48,28 @@ const Generate = ({ setToast }) => {
     changeRequest: "",
     visibility: "public",
   });
+
+  // Intercept incoming reference thumbnails from other views (Community, Library)
+  useEffect(() => {
+    if (location.state?.reference) {
+      const ref = location.state.reference;
+      console.log("📥 Loading reference thumbnail in Studio:", ref._id);
+      
+      setActiveTab("recreate");
+      setRecreateForm({
+        title: ref.title || "",
+        aspectRatio: ref.aspectRatio || "16:9",
+        style: ref.style || styles[0].name,
+        colors: ref.colors || palettes[0],
+        sourceImage: ref.imageUrl || "",
+        changeRequest: "", // Ready for user inputs
+        visibility: ref.visibility || "public",
+      });
+
+      // Clear the router state history so refreshes do not reload old thumbnails
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   /**
    * Syncs input controls in Generate mode

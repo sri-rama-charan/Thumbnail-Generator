@@ -4,14 +4,15 @@
  * Flow:
  * 1. Renders the thumbnail image with a hover visual layout overlay.
  * 2. Visual overlays show design parameters: Style, Palette, and the AI optimized prompt.
- * 3. Client-side download handler:
- *    - Resolves proxy URL using resolveDownloadUrl() to prevent CORS failures.
- *    - Fetches image data as a Blob binary.
- *    - Automatically creates a temporary download link and fires it, saving the file.
- * 4. Displays social features (likes) and deletion tools based on contextual permission settings.
+ * 3. Client-side download handler retrieves the image through the CORS proxy.
+ * 4. Action buttons:
+ *    - Recreate: Redirects user to /generate, pre-loading layout settings in state.
+ *    - Copy URL: Copies the raw image URL to the clipboard.
+ *    - Download: Saves the file locally.
  */
 
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { resolveThumbnailUrl, resolveDownloadUrl } from "../utils/thumbnailUrls";
 import { useAuth } from "../context/AuthContext";
 
@@ -24,14 +25,38 @@ const ThumbnailCard = ({
   showAuthor = false,
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [downloading, setDownloading] = useState(false);
   const [showMetadata, setShowMetadata] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Check if current logged-in user liked this thumbnail
   const isLikedByMe = user && item.likedBy && item.likedBy.includes(user.id || user._id);
 
   /**
-   * Downloads the image by fetching its binary payload through the CORS proxy
+   * Redirects user to Studio, pre-loading reference parameters in state
+   */
+  const handleRecreateClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate("/generate", { state: { reference: item } });
+  };
+
+  /**
+   * Copies the AI optimized prompt to the clipboard
+   */
+  const handleCopyClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard.writeText(item.optimizedPrompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+
+
+  /**
+   * Downloads the image through the CORS proxy
    */
   const handleDownload = async (e) => {
     e.preventDefault();
@@ -41,33 +66,20 @@ const ThumbnailCard = ({
 
     setDownloading(true);
     try {
-      // 1. Resolve proxied URL path
       const proxyUrl = resolveDownloadUrl(item.imageUrl);
-      
-      // 2. Fetch image stream
       const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error("CORS Proxy retrieval returned failure");
-      
-      // 3. Convert to binary Blob object
       const blob = await response.blob();
-      
-      // 4. Instantiate temporary browser URL resource
       const blobUrl = window.URL.createObjectURL(blob);
       
-      // 5. Build anchor tag download trigger
       const tempLink = document.createElement("a");
       tempLink.href = blobUrl;
-      
-      // Format file name
       const sanitizedTitle = item.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
       tempLink.download = `${sanitizedTitle || "thumblify"}-thumbnail.jpg`;
       
-      // Append, trigger, and clean up anchor
       document.body.appendChild(tempLink);
       tempLink.click();
       document.body.removeChild(tempLink);
-      
-      // Revoke blob memory link
       window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
       console.error("Image download script crashed:", err);
@@ -92,7 +104,7 @@ const ThumbnailCard = ({
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
-        {/* Creation Mode Badge (Top-left corner overlay) */}
+        {/* Creation Mode Badge */}
         <span className={`absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shadow-md select-none ${
           item.mode === "recreate"
             ? "bg-brand-purple text-white border border-brand-purple/30"
@@ -167,14 +179,46 @@ const ThumbnailCard = ({
           ) : (
             <div />
           )}
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            {/* Copy button */}
+            <button
+              onClick={handleCopyClick}
+              className={`rounded-lg p-1 transition cursor-pointer ${
+                copied ? "text-emerald-400 bg-emerald-500/10" : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
+              }`}
+              title={copied ? "Copied!" : "Copy Optimized Prompt"}
+            >
+              {copied ? (
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                // Clipboard Doc copy icon (for prompt copy)
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              )}
+            </button>
 
-          {/* Download & Deletion controls */}
-          <div className="flex items-center gap-3">
+
+
+            {/* Recreate button */}
+            <button
+              onClick={handleRecreateClick}
+              className="rounded-lg p-1 text-slate-500 hover:bg-brand-purple/10 hover:text-brand-purple transition cursor-pointer"
+              title="Use as Reference (Recreate)"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3-3 3 3m-3-3v12" />
+              </svg>
+            </button>
+
             {/* Download file button */}
             <button
               onClick={handleDownload}
               disabled={downloading}
-              className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-2xs font-bold uppercase tracking-wider text-slate-300 hover:bg-white/10 hover:text-white transition disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:bg-white/10 hover:text-white transition disabled:opacity-50 cursor-pointer"
             >
               {downloading ? (
                 <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -186,10 +230,10 @@ const ThumbnailCard = ({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
               )}
-              <span>{downloading ? "Saving..." : "Download"}</span>
+              <span>{downloading ? "Saving" : "Download"}</span>
             </button>
 
-            {/* Trash deletion icon (if owned and requested) */}
+            {/* Trash deletion icon */}
             {showDelete && (
               <button
                 onClick={(e) => {
@@ -201,7 +245,7 @@ const ThumbnailCard = ({
                 className="rounded-lg p-1 text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition cursor-pointer"
                 title="Delete Thumbnail"
               >
-                <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
