@@ -1,0 +1,51 @@
+# =========================================================================
+# Thumblify Global Git Ignore Rules & Instructions
+# =========================================================================
+#
+# INSTRUCTIONS FOR DEVELOPERS:
+# 1. DO NOT commit actual secrets or credentials to Git.
+# 2. Local environment configuration files (such as client/.env and server/.env)
+#    are intentionally ignored by the rules below.
+# 3. To set up local settings, copy the respective '.env.example' files to '.env'
+#    and insert your custom MongoDB Atlas links, JWT secrets, and Groq API keys.
+# 4. If you have already accidentally tracked a '.env' file, run:
+#    git rm --cached server/.env
+#    git commit -m "Remove tracked env file"
+# =========================================================================
+
+# Dependencies (Do not track external packages)
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Local Environment Secret Configs (CRITICAL: Never track keys)
+.env
+.env.local
+.env.*.local
+client/.env
+client/.env.local
+server/.env
+
+# Production Build Artifacts (Compiled files should not be tracked)
+dist/
+client/dist/
+build/
+
+# Server Logs and Process Monitoring Files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+server/logs/
+
+# IDE / Text Editor Configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+.DS_Store
+Thumbs.db

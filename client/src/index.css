@@ -1,0 +1,41 @@
+/**
+ * Purpose: Global CSS stylesheet (Tailwind CSS v4).
+ * 
+ * Flow:
+ * 1. Imports Tailwind CSS using the v4 native @import directive.
+ * 2. Defines custom brand theme color tokens using the @theme directive.
+ * 3. Applies global styles for background, transitions, and scrollbar.
+ */
+
+@import "tailwindcss";
+
+/* Define custom branding design tokens directly inside Tailwind CSS v4 */
+@theme {
+  --color-brand-purple: #7c3aed; /* Premium purple color token */
+  --color-brand-pink: #db2777;   /* Vibrant pink color token */
+}
+
+/* Global HTML reset configurations */
+body {
+  background-color: #020617; /* bg-slate-950 equivalent */
+  color: #f8fafc;            /* text-slate-50 equivalent */
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar layouts */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
